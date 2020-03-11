@@ -1,5 +1,6 @@
 import $ivy.`me.sequencer::maces:0.0.1`
-import maces._, Utils._
+import maces._
+import Utils._
 
 case class LibTuple(libType: String, nominalType: String, vt: String)
 
@@ -20,9 +21,33 @@ object asap7 extends MacesModule {
     unpack(getFile(getFiles(wholetar()), "asap7PDK_r1p5.tar.bz2").path).pathRef
   }
 
-  def stdlibFiles = T {
-    // TODO: need patches
-    getFiles(stdlib())
+  def librariesFiles = T {
+    val cwd = T.ctx.dest
+    val rawFiles = getFiles(Seq(stdlib(), pdk()))
+    val sramCdlFile = getFile(rawFiles, "asap7_75t_SRAM.cdl")
+    val patchedCdlFile = newFile("asap7_75t_SRAM.cdl", cwd).pathRef
+    pythonPatch(
+      getSourceFile("fix_sram_cdl_bug.py")().path,
+      Seq(sramCdlFile.path.toString, patchedCdlFile.path.toString)
+    )
+    val originalGds = getFile(rawFiles, "asap7sc7p5t_24.gds")
+    val newGds: Seq[PathRef] = pythonPatch(
+      getSourceFile("generate_multi_vt_gds.py")().path,
+      Seq(originalGds.path.toString)
+    ).out.lines.map(os.Path(_).pathRef)
+    val originalLvsDeck = getFile(rawFiles, "lvsRules_calibre_asap7_160819a.rul")
+    val patchedLvsDeck = newFile("lvsRules_calibre_asap7_160819a.rul", cwd).pathRef
+    pythonPatch(
+      getSourceFile("remove_duplication_in_drc_lvs.py")().path,
+      Seq(originalLvsDeck.path.toString, patchedLvsDeck.path.toString)
+    )
+    val originalDrcDeck = getFile(rawFiles, "drcRules_calibre_asap7_171111a.rul")
+    val patchedDrcDeck = newFile("drcRules_calibre_asap7_171111a.rul", cwd).pathRef
+    pythonPatch(
+      getSourceFile("remove_duplication_in_drc_lvs.py")().path,
+      Seq(originalDrcDeck.path.toString, patchedDrcDeck.path.toString)
+    )
+    (rawFiles ++ newGds :+ patchedCdlFile :+ patchedDrcDeck :+ patchedLvsDeck) diff Seq(sramCdlFile, originalGds, originalDrcDeck, originalLvsDeck)
   }
 
   def pdkFiles = T {
@@ -31,7 +56,7 @@ object asap7 extends MacesModule {
   }
 
   def getStdlibFile(name: String) = T.task {
-    getFile(stdlibFiles(), name)
+    getFile(librariesFiles(), name)
   }
 
   def getPdkFile(name: String) = T.task {
@@ -42,8 +67,8 @@ object asap7 extends MacesModule {
     val libTypeSet = Set("ao", "invbuf", "oa", "seq", "simple")
     val nominalTypeSet = Set("ss", "tt", "ff")
     val vtSet = Set("rvt", "lvt", "slvt", "sram")
-    (libTypeSet cross nominalTypeSet cross vtSet).toSeq.map{
-      case (libType: String, nominalType: String, vt:String) =>
+    (libTypeSet cross nominalTypeSet cross vtSet).toSeq.map {
+      case (libType: String, nominalType: String, vt: String) =>
         val name = s"${libType}_${vt}_${nominalType}"
         val voltage = nominalType match {
           case "ss" => 0.63
@@ -64,7 +89,7 @@ object asap7 extends MacesModule {
           lefName = Some(s"asap7sc7p5t_24_${vtShortName}_4x_170912.lef"),
           spiceName = Some(s"asap7_75t_${vtShortName}.cdl"),
           gdsName = Some(s"asap7sc7p5t_24_${vtShortName}.gds"),
-          fileList = stdlibFiles().map(_.path)
+          fileList = librariesFiles().map(_.path)
         )
     }
   }

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import sys
 import os
 import gdspy
@@ -49,15 +50,15 @@ for cell in original_cells.values():
         if mvt_layer:
             # copy boundary_polygon to mvt_layer to mark the this cell is a mvt cell.
             mvt_polygon = gdspy.PolygonSet(boundary_polygon, multi_lib['mvt_layer'], 0)
-            mvt_cell = cell.copy(name=cell.name.replace('SL', vt), exclude_from_current=True, deep_copy=True).add(mvt_polygon)
+            mvt_cell = cell.copy(name=cell.name.replace('SL', vt), deep_copy=True).add(mvt_polygon)
         else:
             # RVT, just copy the cell
-            mvt_cell = cell.copy(name=cell.name.replace('SL', vt), exclude_from_current=True, deep_copy=True)
+            mvt_cell = cell.copy(name=cell.name.replace('SL', vt), deep_copy=True)
         # add mvt_cell to corresponding multi_lib
         multi_lib['lib'].add(mvt_cell)
 
 for vt, multi_lib in multi_libs.items():
     # write multi_lib
-    filename = f"{sys.argv[2]}/{os.path.splitext(os.path.basename(orig_gds))[0]}_{vt}'.gds'"
+    filename = f"{os.getcwd()}/{os.path.splitext(os.path.basename(orig_gds))[0]}_{vt}.gds"
     multi_lib['lib'].write_gds(filename)
     print(filename)

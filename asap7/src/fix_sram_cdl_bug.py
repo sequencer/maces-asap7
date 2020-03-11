@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import sys
 import re
 """
@@ -12,4 +13,4 @@ pattern1 = re.compile("slvt")
 with open(sys.argv[2], 'w') as out_f:
     # input asap7libs_24.tar.bz2/asap7libs_24/cdl/lvs/asap7_75t_SRAM.cdl
     with open(sys.argv[1], 'r') as in_f:
-        out_f.write(pattern1.sub("sram", pattern0.sub("SRAM", in_f.read())).encode('utf-8'))
+        out_f.write(pattern1.sub("sram", pattern0.sub("SRAM", in_f.read())))
