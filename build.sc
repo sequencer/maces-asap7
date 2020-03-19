@@ -9,18 +9,26 @@ object LibTuple {
 }
 
 object asap7 extends MacesModule {
+  /** extract whole tar from original tar.
+    *
+    * [[getResourceFile]] will get `ASAP7_PDKandLIB.tar` from `asap7/resources` dir
+    * File name should not have conflict name in `resources` dir
+    * */
   def wholetar = T.sources {
     unpack(getResourceFile("ASAP7_PDKandLIB.tar")().path)
   }
 
+  /** extract the stdlib from ASAP7. */
   def stdlib = T {
     unpack(getFile(getFiles(wholetar()), "asap7libs_24.tar.bz2").path).pathRef
   }
 
+  /** extract the PDK from ASAP7. */
   def pdk = T {
     unpack(getFile(getFiles(wholetar()), "asap7PDK_r1p5.tar.bz2").path).pathRef
   }
 
+  /** Patch the bug from PDK, and give the file list in [[PathRef]]. */
   def librariesFiles = T {
     val cwd = T.ctx.dest
     val rawFiles = getFiles(Seq(stdlib(), pdk()))
@@ -50,19 +58,25 @@ object asap7 extends MacesModule {
     (rawFiles ++ newGds :+ patchedCdlFile :+ patchedDrcDeck :+ patchedLvsDeck) diff Seq(sramCdlFile, originalGds, originalDrcDeck, originalLvsDeck)
   }
 
+  /** get the file list from pdk. */
   def pdkFiles = T {
     // TODO: need patches
     getFiles(pdk())
   }
 
+  /** get the file list from stdlib. */
   def getStdlibFile(name: String) = T.task {
     getFile(librariesFiles(), name)
   }
 
+  /** get one file from pdk, matched with file name. */
   def getPdkFile(name: String) = T.task {
     getFile(pdkFiles(), name)
   }
 
+  /** get all libraries, notice a Task should not depends on other Task's result.
+    * You can only pass the filelist to Library, and evaluate at last.
+    * */
   def libraries = T.persistent {
     val libTypeSet = Set("ao", "invbuf", "oa", "seq", "simple")
     val nominalTypeSet = Set("ss", "tt", "ff")
@@ -94,18 +108,22 @@ object asap7 extends MacesModule {
     }
   }
 
+  /** get the lvs Deck. */
   def lvsDeck = T {
     getPdkFile("lvsRules_calibre_asap7.rul")
   }
 
+  /** get the drc Deck. */
   def drcDeck = T {
     getPdkFile("drcRules_calibre_asap7.rul")
   }
 
+  /** get the layer map. */
   def layerMap = T {
     getPdkFile("asap7_fromAPR.layermap")
   }
 
+  /** get the tech lef. */
   def techLef = T {
     getStdlibFile("asap7_tech_4x_170803.lef")
   }
